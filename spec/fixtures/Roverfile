@@ -1,0 +1,10 @@
+luarocks {
+    module { 'inspect' },
+
+    manifest 'luajit' {
+        module { '30log', '>= 1.3' },
+    }
+}
+
+opm {
+}
