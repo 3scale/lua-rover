@@ -88,15 +88,23 @@ local function load_rockspec(name, constraints)
     if not rockspec then
         local query = { name = name:lower(), constraints = constraints }
         query.arch = 'rockspec'
-        local spec = assert(search.find_suitable_rock(query))
-        rockspec, err = assert(fetch.load_rockspec(spec))
+
+        local spec, err = search.find_suitable_rock(query)
+        if spec then
+            rockspec, err = assert(fetch.load_rockspec(spec))
+        else
+            error("could not find module " .. deps.show_dep(query))
+        end
+
     end
 
     return rockspec, err
 end
 
+local any_constraints = parse_constraints('>= 0')
+
 local function expand_dependencies(dep, dependencies)
-    local rockspec = load_rockspec(dep.name, dep.constraints)
+    local rockspec = load_rockspec(dep.name, dep.constraints or any_constraints)
 
     if not dependencies[rockspec.name] then
         dependencies[rockspec.name] = rockspec.version

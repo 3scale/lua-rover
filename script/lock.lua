@@ -1,4 +1,4 @@
-local roverfile = require('rover.roverfile').read()
+local roverfile = assert(require('rover.roverfile').read())
 
 local lock = roverfile:lock()
 

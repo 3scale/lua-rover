@@ -59,6 +59,18 @@ function _M:manifest(name)
     end
 end
 
+function _M:group(name)
+    assert(name)
+
+    return function(modules)
+        for i=1, #modules do
+            modules[i].group = name
+        end
+
+        return { 'group', name, modules }
+    end
+end
+
 function _M:luarocks()
     return function(...) return {'luarocks', ... } end
 end
@@ -74,7 +86,7 @@ local function wrap_self(self, fn)
     end
 end
 
-local exported = { 'module', 'manifest', 'luarocks', 'opm' }
+local exported = { 'module', 'manifest', 'luarocks', 'opm', 'group' }
 
 function _M:env()
     local env = {}

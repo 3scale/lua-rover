@@ -1,5 +1,10 @@
 luarocks {
     manifest 'root' {
         module { 'lua_cliargs', '>= 3.0' },
+    },
+
+    group 'development' {
+        module { 'busted' },
+        module { 'inspect' },
     }
 }
