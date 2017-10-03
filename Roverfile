@@ -3,8 +3,12 @@ luarocks {
         module { 'lua_cliargs', '>= 3.0' },
     },
 
-    group 'development' {
+    group 'testing' {
         module { 'busted' },
+    },
+
+    group 'development' {
+        module { 'lua-resty-repl' },
         module { 'inspect' },
     }
 }

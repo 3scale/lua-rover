@@ -1,7 +1,7 @@
 local setmetatable = setmetatable
 local pairs = pairs
 
-local path = require('luarocks.path')
+local tree = require('rover.tree')
 local fetch = require('luarocks.fetch')
 local search = require('luarocks.search')
 local deps = require('luarocks.deps')
@@ -9,8 +9,6 @@ local vers = pcall(require, 'luarocks.vers') or {}
 local manif = require('luarocks.manif_core')
 
 local parse_constraints = deps.parse_constraints or vers.parse_constraints or error('missing parse_constraints')
-
-path.use_tree(os.getenv('PWD') .. '/lua_modules')
 
 local _M = {
     DEFAULT_PATH = 'Roverfile.lock'
@@ -80,7 +78,7 @@ local function load_rockspec(name, constraints)
         local version = deps.parse_version(versions[i])
 
         if deps.match_constraints(version, constraints) then
-            local file = path.rockspec_file(name, versions[i])
+            local file = tree.rockspec_file(name, versions[i])
             rockspec, err = fetch.load_local_rockspec(file, false)
         end
     end
