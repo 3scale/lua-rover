@@ -29,6 +29,12 @@ function _M.new()
     return setmetatable({ modules = { }}, mt)
 end
 
+local function add_modules(table, modules)
+    for i=1, #(modules) do
+        insert(table, modules[i])
+    end
+end
+
 function _M:eval(chunk)
     local dsl = dsl.new(self)
     local ok, err = load(chunk, _M.DEFAULT_PATH, 't', dsl:env())
@@ -40,10 +46,13 @@ function _M:eval(chunk)
     end
 
     if ok then
-        for i=1, #(dsl.modules) do
-            insert(modules, dsl.modules[i])
-            insert(self.modules, dsl.modules[i])
+        add_modules(modules, dsl.modules)
+
+        for i=1, #(dsl.rockspecs) do
+            add_modules(modules, dsl.rockspecs[i].modules)
         end
+
+        add_modules(self.modules, modules)
 
         return modules
     else

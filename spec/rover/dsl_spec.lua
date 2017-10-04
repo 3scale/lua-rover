@@ -20,4 +20,10 @@ describe('DSL', function()
 
         assert(dsl:manifest({}))
     end)
+
+    it('has rockspec', function()
+        local dsl = _M.new()
+
+        assert(dsl:rockspec('lua-rover-scm-1.rockspec'))
+    end)
 end)

@@ -1,7 +1,6 @@
 luarocks {
-    manifest 'root' {
-        module { 'lua_cliargs', '>= 3.0' },
-    },
+
+    rockspec 'lua-rover-scm-1.rockspec',
 
     group 'testing' {
         module { 'busted' },

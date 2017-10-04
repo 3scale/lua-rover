@@ -1,10 +1,7 @@
 local setmetatable = setmetatable
 
-local cliargs = require('cliargs')
 local install = require('rover.install')
 local lock = require('rover.lock')
-
-local cli = cliargs:command('install', 'Install dependencies')
 
 local _M = {
 
@@ -12,12 +9,16 @@ local _M = {
 
 local mt = { }
 
-function mt:__call(options)
+function mt:__call()
     local lockfile = lock.read()
 
     install:call(lockfile)
 end
 
-cli:action(_M)
+function _M:new(parser)
+    parser:command('install', 'Install dependencies')
+
+    return setmetatable({ }, mt)
+end
 
 return setmetatable(_M, mt)

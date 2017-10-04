@@ -1,30 +1,42 @@
-local cli = require 'cliargs'
+require('rover.setup')
+
+local parser = require('rover.vendor').require('argparse')() {
+    name = "rover",
+    description = "Rover provides consistent environment for Lua projects."
+}
+local command_target = '_cmd'
+parser:command_target(command_target)
 
 local _M = { }
 
 local mt = {}
 
-local function load_commands(commands)
+local function load_commands(commands, parser)
     for i=1, #commands do
-        commands[commands[i]] = require('rover.cli.' .. commands[i])
+        commands[commands[i]] = require('rover.cli.' .. commands[i]):new(parser)
     end
     return commands
 end
 
-_M.commands = load_commands({ 'exec', 'install', 'lock' })
+_M.commands = load_commands({ 'exec', 'install', 'lock' }, parser)
 
 function mt.__call(self, arg)
     -- now we parse the options like usual:
-    local args, err = cli:parse()
+    local ok, ret = self.parse(arg)
+    local cmd = ok and ret[command_target]
 
-    if not args and err then
-        print(err)
-        os.exit(1)
-    elseif args and #args == 0 then
-        self.commands.install()
+    if ok and cmd then
+        self.commands[cmd](ret)
+    elseif ok then
+        self.commands.install(ret)
     else
-
+        print(ret)
+        os.exit(1)
     end
+end
+
+function _M.parse(arg)
+    return parser:pparse(arg)
 end
 
 return setmetatable(_M, mt)

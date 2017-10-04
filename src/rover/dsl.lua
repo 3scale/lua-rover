@@ -1,8 +1,11 @@
 local setmetatable = setmetatable
 local ipairs = ipairs
 local insert = table.insert
+local concat = table.concat
 local format = string.format
 local unpack = unpack
+
+local fetch = require('luarocks.fetch')
 
 local _M = {
 
@@ -12,7 +15,8 @@ local mt = { __index = _M }
 
 function _M.new()
     return setmetatable({
-        modules = {}
+        modules = {},
+        rockspecs = {},
     }, mt)
 end
 
@@ -35,9 +39,11 @@ local module_mt = {
 local function module(name, version)
     return setmetatable({
         name = name, version = version or '>= 0',
+        group = 'production',
         manifest = manifest('root')
     }, module_mt)
 end
+
 
 function _M:module(spec)
     local mod = module(unpack(spec))
@@ -45,6 +51,45 @@ function _M:module(spec)
     return mod
 end
 
+local rockspec_mt = {
+    __tostring = function(rockspec)
+        return format("rockspec:%s", rockspec.name)
+    end
+}
+
+local function rockspec(name)
+    local rockspec = assert(fetch.load_local_rockspec(name, true))
+    local modules = {}
+
+    local spec = setmetatable({
+        name = name,
+        spec = rockspec,
+        modules = modules }, rockspec_mt)
+
+
+    for i=1, #(rockspec.dependencies) do
+        local dep = rockspec.dependencies[i]
+        local version = {}
+
+        for c=1, #(dep.constraints) do
+            version[c] = format('%s %s', dep.constraints[c].op, dep.constraints[c].version.string)
+        end
+
+        local mod = module(dep.name, concat(version, ', '))
+        mod.rockspec = spec
+        insert(modules, mod)
+    end
+
+    return spec
+end
+
+function _M:rockspec(name)
+    local spec = rockspec(name)
+
+    insert(self.rockspecs, spec)
+
+    return spec
+end
 
 function _M:manifest(name)
     assert(name)
@@ -86,7 +131,7 @@ local function wrap_self(self, fn)
     end
 end
 
-local exported = { 'module', 'manifest', 'luarocks', 'opm', 'group' }
+local exported = { 'module', 'manifest', 'luarocks', 'opm', 'group', 'rockspec' }
 
 function _M:env()
     local env = {}

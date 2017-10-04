@@ -1,26 +1,27 @@
 local setmetatable = setmetatable
+local remove = table.remove
 
 local exec = require('rover.exec')
 local env = require('rover.env')
 
-local cliargs = require('cliargs')
-local cli = cliargs
-    :command('exec', 'Exec command')
-    :argument('command', 'Command to be executed')
-    :splat('args', 'Arguments to the command', nil, 999)
-
-
-local _M = {
-
-}
-
-cli:action(_M)
-
+local _M = {}
 
 local mt = {}
 
 function mt:__call(options)
-    return exec(options.command, options.args or {}, env)
+    local cmd = remove(options.command, 1)
+    return exec(cmd, options.command, env)
 end
+
+function _M:new(parser)
+    local cmd = parser:command('exec', 'Exec command')
+
+    cmd:argument('command'):args("+")
+
+    cmd:handle_options(false)
+
+    return setmetatable({ parser = parser, cmd = cmd }, mt)
+end
+
 
 return setmetatable(_M, mt)

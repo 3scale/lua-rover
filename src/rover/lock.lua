@@ -19,8 +19,16 @@ local mt = { __index = _M }
 local dependencies_mt = {
     __tostring = function(t)
         local str = ""
+        local dependencies = {}
+
         for name, version in pairs(t) do
-            str = str .. name .. ' ' .. version .. "\n"
+            table.insert(dependencies, { name = name, version = version })
+        end
+
+        table.sort(dependencies, function(a,b) return a.name < b.name end)
+
+        for i=1, #dependencies do
+            str = str .. string.format('%s %s\n', dependencies[i].name, dependencies[i].version)
         end
 
         return str
@@ -122,7 +130,7 @@ local function expand_dependencies(dep, dependencies)
 end
 
 function _M:resolve()
-    local index = self:index()
+    local index = assert(self:index())
     local dependencies = setmetatable({}, dependencies_mt)
 
     for name,spec in pairs(index) do
@@ -150,10 +158,13 @@ function _M:index()
     local index = {}
 
     for i=1, #modules do
-        if index[modules[i].name] then
-            return nil, 'duplicate dependency', modules[i].name
+        local module = modules[i]
+    local existing =  index[module.name]
+
+        if existing and existing.version ~= module.version then
+            return nil, string.format('duplicate dependency %s (%s ~= %s)', module.name, existing.version, module.version)
         else
-            index[modules[i].name] = modules[i]
+            index[module.name] = module
         end
     end
 
