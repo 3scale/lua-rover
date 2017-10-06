@@ -44,10 +44,17 @@ end
 
 function _M.read(lockfile)
     local file = lockfile or _M.DEFAULT_PATH
-    local handle = type(file) == 'string' and io.open(file) or file
+    local handle, err
+
+    if type(file) == 'string' then
+        handle, err = io.open(file)
+    else
+        handle = file
+    end
+
+    if not handle then return nil, err end
 
     local lock = _M.new()
-
 
     for line in handle:lines() do
         local dep, err = deps.parse_dep(line)
