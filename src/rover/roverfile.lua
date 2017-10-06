@@ -16,11 +16,19 @@ local mt = { __index = _M }
 function _M.read(file)
     local p = file or _M.DEFAULT_PATH
 
+    local handle, err
+    if type(p) == 'string' then
+        handle, err = io.open(p)
+    else
+        handle = p
+    end
+
+    if not handle then return nil, err end
+
+    local ok
     local roverfile = _M.new()
 
-    local handle = type(p) == 'string' and io.open(p) or p
-
-    local ok, err = roverfile:eval(handle:read('*a'))
+    ok, err = roverfile:eval(handle:read('*a'))
 
     if ok then return roverfile else return false, err end
 end
