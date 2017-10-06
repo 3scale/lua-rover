@@ -15,7 +15,9 @@ local function collect_modules(tree, module, cache)
 
     for _, rock in ipairs(found[version]) do
         for module, file in pairs(rock.modules) do
-            modules[module] = file
+            if not package.loaded[module] then
+                modules[module] = file
+            end
         end
 
         for dep, _ in pairs(rock.dependencies) do
@@ -28,18 +30,22 @@ end
 
 local function preload()
     local context
+    local rock_trees = loader and loader.rocks_trees
 
-    if loader then
-        local modules
+    if not rock_trees then return end
 
-        for _, tree in ipairs(loader.rocks_trees) do
-            if not modules then
-                modules = collect_modules(tree, 'lua-rover')
-            end
+    local modules
+
+    for _, tree in ipairs(loader.rocks_trees) do
+        if not modules then
+            modules = collect_modules(tree, 'lua-rover')
         end
+    end
 
-        for module, _ in pairs(modules) do
-            pcall(require, module) -- preload everything
+    for module, _ in pairs(modules) do
+        -- preload everything except luarocks
+        if not module:match('^luarocks%.') then
+            require(module)
         end
     end
 end

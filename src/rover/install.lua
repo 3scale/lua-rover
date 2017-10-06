@@ -29,7 +29,7 @@ local function install(name, version, deps_mode)
     assert(fs.check_command_permissions({}))
 
     if not repos.is_installed(name, version) then
-        local spec = search.find_suitable_rock(search.make_query(name:lower(), version))
+        local spec = assert(search.find_suitable_rock(search.make_query(name:lower(), version)))
 
         if spec:match("%.rockspec$") then
             assert(build.build_rockspec(spec, true, false, deps_mode))
@@ -47,6 +47,8 @@ end
 
 function _M:call(lock)
     local status = {}
+
+    local tree = require('rover.tree')
 
     for name, version in pairs(lock.dependencies) do
         local ret, err = install(name, version, _M.DEPS_MODE)
