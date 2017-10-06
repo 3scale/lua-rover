@@ -1,4 +1,4 @@
-require('rover.setup')
+require('rover.setup')()
 
 local parser = require('rover.vendor').require('argparse')() {
     name = "rover",
