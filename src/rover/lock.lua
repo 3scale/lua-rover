@@ -84,9 +84,8 @@ function _M:add(dep)
     end
 end
 
-local function load_rockspec(name, constraints)
+local function find_cached_rockspec(name, constraints)
     local versions = manif.get_versions(name, 'one')
-
     local rockspec, err
 
     for i=1, #versions do
@@ -95,20 +94,41 @@ local function load_rockspec(name, constraints)
         if deps.match_constraints(version, constraints) then
             local file = tree.rockspec_file(name, versions[i])
             rockspec, err = fetch.load_local_rockspec(file, false)
+            if rockspec then break end
         end
     end
 
+    return rockspec, err
+end
+
+local function find_remote_rockspec(name, constraints)
+    local query = {
+        name = name:lower(),
+        constraints = constraints,
+        arch = 'rockspec',
+    }
+    local rockspec, err = search.find_suitable_rock(query)
+
+    if rockspec then
+        rockspec, err = fetch.load_rockspec(rockspec)
+    else
+        err = "could not find module " .. deps.show_dep(query)
+    end
+
+    return rockspec, err
+end
+
+
+local function load_rockspec(name, constraints, no_cache)
+    local use_cache = not no_cache[name]
+    local rockspec, err
+
+    if use_cache then
+        rockspec, err = find_cached_rockspec(name, constraints)
+    end
+
     if not rockspec then
-        local query = { name = name:lower(), constraints = constraints }
-        query.arch = 'rockspec'
-
-        local spec, err = search.find_suitable_rock(query)
-        if spec then
-            rockspec, err = assert(fetch.load_rockspec(spec))
-        else
-            error("could not find module " .. deps.show_dep(query))
-        end
-
+        rockspec, err = find_remote_rockspec(name, constraints)
     end
 
     return rockspec, err
@@ -116,8 +136,8 @@ end
 
 local any_constraints = parse_constraints('>= 0')
 
-local function expand_dependencies(dep, dependencies)
-    local rockspec = load_rockspec(dep.name, dep.constraints or any_constraints)
+local function expand_dependencies(dep, dependencies, no_cache)
+    local rockspec = load_rockspec(dep.name, dep.constraints or any_constraints, no_cache)
 
     if not dependencies[rockspec.name] then
         dependencies[rockspec.name] = rockspec.version
@@ -128,20 +148,23 @@ local function expand_dependencies(dep, dependencies)
     local matched, missing, _ = deps.match_deps(rockspec, nil, 'one')
 
     for _, dep in pairs(matched) do
-        expand_dependencies(dep, dependencies)
+        expand_dependencies(dep, dependencies, no_cache)
     end
 
     for _, dep in pairs(missing) do
-        expand_dependencies(dep, dependencies)
+        expand_dependencies(dep, dependencies, no_cache)
     end
 end
 
-function _M:resolve()
+function _M:resolve(no_cache)
     local index = assert(self:index())
     local dependencies = setmetatable({}, dependencies_mt)
 
     for name,spec in pairs(index) do
-        expand_dependencies({ name = name, constraints = parse_constraints(spec.version) }, dependencies)
+        expand_dependencies({
+            name = name,
+            constraints = parse_constraints(spec.version)
+        }, dependencies, no_cache or {})
     end
 
     self.resolved = dependencies
@@ -160,22 +183,50 @@ function _M:write(file)
     h:close()
 end
 
-function _M:index()
-    local modules = self.roverfile.modules
+local function add_to_index(index, module)
+    local existing =  index[module.name]
+
+    if existing and existing.version ~= module.version then
+        return nil, string.format('duplicate dependency %s (%s ~= %s)', module.name, existing.version, module.version)
+    else
+        index[module.name] = module
+    end
+
+    return module
+end
+
+local function index_from_roverfile(roverfile)
+    local modules = roverfile.modules
     local index = {}
 
     for i=1, #modules do
-        local module = modules[i]
-    local existing =  index[module.name]
+        local module, err = add_to_index(index, modules[i])
 
-        if existing and existing.version ~= module.version then
-            return nil, string.format('duplicate dependency %s (%s ~= %s)', module.name, existing.version, module.version)
-        else
-            index[module.name] = module
-        end
+        if not module and err then return nil, err end
     end
 
     return index
+end
+
+local function index_from_dependencies(dependencies)
+    local index = {}
+
+    for name, version in pairs(dependencies) do
+        local module, err = add_to_index(index, { name = name, version = version })
+        if not module and err then return nil, err end
+    end
+
+    return index
+end
+
+function _M:index()
+    if self.roverfile then
+        return index_from_roverfile(self.roverfile)
+    elseif self.dependencies then
+        return index_from_dependencies(self.dependencies)
+    else
+        return nil, 'cannot index dependencies'
+    end
 end
 
 return _M

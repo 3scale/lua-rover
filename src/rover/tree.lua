@@ -16,7 +16,11 @@ local mt = {
         bin_path = function(self)
             return path.deploy_bin_dir(self or _M)
         end,
+        rocks_dir = function(self)
+            return path.rocks_dir(tostring(self or _M))
+        end
     },
+    __tostring = function(t) return t.root or _M.root end
 }
 
 path.use_tree(_M.root)

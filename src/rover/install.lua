@@ -24,9 +24,13 @@ getmetatable(io.output()).lines = function(self, ...)
     end
 end
 
-local function install(name, version, deps_mode)
+local function install(name, version, deps_mode, force)
 
     assert(fs.check_command_permissions({}))
+
+    if force and force[name] then
+        repos.delete_version(name, version, deps_mode)
+    end
 
     if not repos.is_installed(name, version) then
         local spec = assert(search.find_suitable_rock(search.make_query(name:lower(), version)))
@@ -45,13 +49,13 @@ local function install(name, version, deps_mode)
     return 'exists'
 end
 
-function _M:call(lock)
+function _M:call(lock, force)
     local status = {}
 
     local tree = require('rover.tree')
 
     for name, version in pairs(lock.dependencies) do
-        local ret, err = install(name, version, _M.DEPS_MODE)
+        local ret, err = install(name, version, _M.DEPS_MODE, force)
         table.insert(status, { name = name, version = version, status = ret, error = err })
     end
 

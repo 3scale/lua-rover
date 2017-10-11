@@ -19,6 +19,7 @@ build = {
       ["rover.cli.exec"] = "src/rover/cli/exec.lua",
       ["rover.cli.install"] = "src/rover/cli/install.lua",
       ["rover.cli.lock"] = "src/rover/cli/lock.lua",
+      ["rover.cli.update"] = "src/rover/cli/update.lua",
       ["rover.dsl"] = "src/rover/dsl.lua",
       ["rover.env"] = "src/rover/env.lua",
       ["rover.exec"] = "src/rover/exec.lua",
@@ -27,6 +28,7 @@ build = {
       ["rover.roverfile"] = "src/rover/roverfile.lua",
       ["rover.setup"] = "src/rover/setup.lua",
       ["rover.tree"] = "src/rover/tree.lua",
+      ["rover.update"] = "src/rover/update.lua",
       ["rover.vendor"] = "src/rover/vendor.lua"
    },
    install = {
