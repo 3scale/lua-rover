@@ -1,14 +1,14 @@
 local setmetatable = setmetatable
 
 local update = require('rover.update')
-local lock = require('rover.lock')
+local roverfile = require('rover.roverfile')
 
 local _M = {}
 
 local mt = {}
 
 function mt:__call(options)
-    local lck = lock.read()
+    local lock = roverfile.read():lock()
     local all = true
     local dependencies = {}
 
@@ -18,11 +18,10 @@ function mt:__call(options)
     end
 
     if all then
-        dependencies = lck:index()
+        dependencies = lock:index()
     end
 
-
-    return assert(update:call(lck, dependencies))
+    return assert(update:call(lock, dependencies))
 end
 
 function _M:new(parser)

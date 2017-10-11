@@ -1,5 +1,6 @@
-local lock = require('rover.lock').read()
+local roverfile = require('rover.roverfile').read()
 
+local lock = roverfile:lock()
 local dependencies = {}
 local update_all = true
 
@@ -14,4 +15,4 @@ end
 
 local update = require('rover.update')
 
-update:call(lock, dependencies)
+assert(update:call(lock, dependencies))
