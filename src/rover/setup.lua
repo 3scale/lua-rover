@@ -30,17 +30,19 @@ end
 
 local function preload()
     local context
-    local rock_trees = loader and loader.rocks_trees
+    local rocks_trees = loader and loader.rocks_trees
 
-    if not rock_trees then return end
+    if not rocks_trees then return end
 
     local modules
 
-    for _, tree in ipairs(loader.rocks_trees) do
+    for _, tree in ipairs(rocks_trees) do
         if not modules then
             modules = collect_modules(tree, 'lua-rover')
         end
     end
+
+    if not modules then return end
 
     for module, _ in pairs(modules) do
         -- preload everything except luarocks
