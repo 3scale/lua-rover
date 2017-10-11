@@ -1,0 +1,16 @@
+---
+engines:
+  luacheck:
+    enabled: true
+    channel: beta
+  fixme:
+    enabled: true
+ratings:
+  paths:
+  - "**.lua"
+  - "**/bin/*"
+exclude_paths:
+- script/
+- spec/
+- lua_modules/
+- .idea/
