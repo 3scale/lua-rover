@@ -31,5 +31,7 @@ for _, file in ipairs(fs.find()) do
     end
 end
 
+fs.pop_dir()
+
 print('writing updated ', file)
 assert(persist.save_from_table(file, rockspec, type_check.rockspec_order))
