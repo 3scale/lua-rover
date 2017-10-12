@@ -18,7 +18,7 @@ local function load_commands(commands, parser)
     return commands
 end
 
-_M.commands = load_commands({ 'exec', 'install', 'lock', 'update' }, parser)
+_M.commands = load_commands({ 'exec', 'install', 'lock', 'update', 'inspect' }, parser)
 
 function mt.__call(self, arg)
     -- now we parse the options like usual:
