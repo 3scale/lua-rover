@@ -8,8 +8,8 @@ local _M = {
 
 local mt = { }
 
-function mt:__call()
-    local roverfile, err = assert(file.read())
+function mt:__call(options)
+    local roverfile, err = assert(file.read(options.roverfile))
 
     if not roverfile and err then
         return nil, err
@@ -17,7 +17,7 @@ function mt:__call()
 
     local lock = roverfile:lock()
 
-    print('Resolving Roverfile')
+    print('Resolving ' .. options.roverfile)
 
     local t1 = os.time()
     lock:resolve()
@@ -27,8 +27,8 @@ end
 
 
 function _M:new(parser)
-    parser:command('lock', self._NAME)
-
+    local cmd = parser:command('lock', self._NAME)
+    cmd:option('--roverfile', 'Path to Roverfile', 'Roverfile')
     return setmetatable({ }, mt)
 end
 

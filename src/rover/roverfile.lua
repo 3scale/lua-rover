@@ -1,7 +1,7 @@
 local setmetatable = setmetatable
 local load = load
 local pcall = pcall
-
+local open = io.open
 local insert = table.insert
 
 local dsl = require('rover.dsl')
@@ -13,28 +13,27 @@ local _M = {
 
 local mt = { __index = _M }
 
-function _M.read(file)
-    local p = file or _M.DEFAULT_PATH
-
-    local handle, err
-    if type(p) == 'string' then
-        handle, err = io.open(p)
-    else
-        handle = p
-    end
-
+local function read(self)
+    local handle, err = open(self.path)
     if not handle then return nil, err end
 
     local ok
-    local roverfile = _M.new()
+    ok, err = self:eval(handle:read('*a'))
 
-    ok, err = roverfile:eval(handle:read('*a'))
-
-    if ok then return roverfile else return false, err end
+    if ok then return self else return nil, err end
 end
 
-function _M.new()
-    return setmetatable({ modules = { }}, mt)
+function _M.read(path)
+    local roverfile = _M.new(path)
+    return roverfile:read()
+end
+
+function _M.new(path)
+    return setmetatable({
+        read = read,
+        path = path or _M.DEFAULT_PATH,
+        modules = {}
+    }, mt)
 end
 
 local function add_modules(table, modules)

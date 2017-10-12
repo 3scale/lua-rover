@@ -6,6 +6,7 @@ local format = string.format
 local unpack = unpack
 
 local fetch = require('luarocks.fetch')
+local fs = require('luarocks.fs')
 
 local _M = {
 
@@ -13,8 +14,13 @@ local _M = {
 
 local mt = { __index = _M }
 
-function _M.new()
+local function root(path)
+    return path:gsub('/Roverfile', '')
+end
+
+function _M.new(roverfile)
     return setmetatable({
+        root = root(roverfile.path),
         modules = {},
         rockspecs = {},
     }, mt)
@@ -84,7 +90,8 @@ local function rockspec(name)
 end
 
 function _M:rockspec(name)
-    local spec = rockspec(name)
+    local path = fs.absolute_name(name, self.root)
+    local spec = rockspec(path)
 
     insert(self.rockspecs, spec)
 

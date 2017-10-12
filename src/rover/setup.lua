@@ -3,12 +3,12 @@ local ipairs = ipairs
 local pairs = pairs
 local package = package
 local require = require
+local pcall = pcall
 
 local mt = {}
 local _M = {}
 
-
-local function collect_modules(tree, module, cache)
+local function collect_modules(loader, tree, module, cache)
     local found = tree.manifest.repository[module]
     local version = loader.context[module]
     if not found or not version then return nil end
@@ -22,14 +22,14 @@ local function collect_modules(tree, module, cache)
         end
 
         for dep, _ in pairs(rock.dependencies) do
-            modules = collect_modules(tree, dep, modules)
+            modules = collect_modules(loader, tree, dep, modules)
         end
     end
 
     return modules
 end
 
-local function preload()
+local function preload(loader)
     local context
     local rocks_trees = loader and loader.rocks_trees
 
@@ -39,7 +39,7 @@ local function preload()
 
     for _, tree in ipairs(rocks_trees) do
         if not modules then
-            modules = collect_modules(tree, 'lua-rover')
+            modules = collect_modules(loader, tree, 'lua-rover')
         end
     end
 
@@ -64,8 +64,11 @@ function mt.__call()
 
     package.path = path
 
+    local ok, loader = pcall(require, 'luarocks.loader')
+
+    if ok then preload(loader) end
+
     if roverfile.read() then
-        preload() -- preload all rover dependencies
         package.path = env.path() -- remove global load paths
     end
 end

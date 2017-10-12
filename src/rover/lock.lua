@@ -124,7 +124,8 @@ function _M:resolve(no_cache)
 end
 
 function _M:write(file)
-    local f = file or _M.DEFAULT_PATH
+    local path = self.roverfile and self.roverfile.path
+    local f = file or (path and path .. '.lock') or _M.DEFAULT_PATH
     local h = type(f) == 'string' and io.open(f, 'w') or file
 
     local deps = self.resolved or self:resolve()
