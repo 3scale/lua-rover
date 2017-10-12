@@ -6,10 +6,6 @@ local _M = {
 
 }
 
-local function parse_license(name)
-    return name:match('^[%w-%d%.]+')
-end
-
 function _M.call(lock)
     local index = lock:index()
 
@@ -21,7 +17,7 @@ function _M.call(lock)
         insert(dependencies, {
             name = name,
             version = spec.version,
-            license = parse_license(rockspec.description.license),
+            license = rockspec.description.license,
         })
     end
 
