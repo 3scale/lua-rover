@@ -1,14 +1,17 @@
 local setmetatable = setmetatable
 local pairs = pairs
+local ipairs = ipairs
+local type = type
+local tostring = tostring
+local assert = assert
+local error = error
+local insert = table.insert
+local sort = table.sort
+local format = string.format
+local open = io.open
 
-local tree = require('rover.tree')
-local fetch = require('luarocks.fetch')
-local search = require('luarocks.search')
 local deps = require('luarocks.deps')
-local vers = pcall(require, 'luarocks.vers') or {}
-local manif = require('luarocks.manif_core')
-
-local parse_constraints = deps.parse_constraints or vers.parse_constraints or error('missing parse_constraints')
+local rover_rocspec  = require('rover.rockspec')
 
 local _M = {
     DEFAULT_PATH = 'Roverfile.lock'
@@ -22,13 +25,13 @@ local dependencies_mt = {
         local dependencies = {}
 
         for name, version in pairs(t) do
-            table.insert(dependencies, { name = name, version = version })
+            insert(dependencies, { name = name, version = version })
         end
 
-        table.sort(dependencies, function(a,b) return a.name < b.name end)
+        sort(dependencies, function(a,b) return a.name < b.name end)
 
         for i=1, #dependencies do
-            str = str .. string.format('%s %s\n', dependencies[i].name, dependencies[i].version)
+            str = str .. format('%s %s\n', dependencies[i].name, dependencies[i].version)
         end
 
         return str
@@ -47,7 +50,7 @@ function _M.read(lockfile)
     local handle, err
 
     if type(file) == 'string' then
-        handle, err = io.open(file)
+        handle, err = open(file)
     else
         handle = file
     end
@@ -84,60 +87,8 @@ function _M:add(dep)
     end
 end
 
-local function find_cached_rockspec(name, constraints)
-    local versions = manif.get_versions(name, 'one')
-    local rockspec, err
-
-    for i=1, #versions do
-        local version = deps.parse_version(versions[i])
-
-        if deps.match_constraints(version, constraints) then
-            local file = tree.rockspec_file(name, versions[i])
-            rockspec, err = fetch.load_local_rockspec(file, false)
-            if rockspec then break end
-        end
-    end
-
-    return rockspec, err
-end
-
-local function find_remote_rockspec(name, constraints)
-    local query = {
-        name = name:lower(),
-        constraints = constraints,
-        arch = 'rockspec',
-    }
-    local rockspec, err = search.find_suitable_rock(query)
-
-    if rockspec then
-        rockspec, err = fetch.load_rockspec(rockspec)
-    else
-        err = "could not find module " .. deps.show_dep(query)
-    end
-
-    return rockspec, err
-end
-
-
-local function load_rockspec(name, constraints, no_cache)
-    local use_cache = not no_cache[name]
-    local rockspec, err
-
-    if use_cache then
-        rockspec, err = find_cached_rockspec(name, constraints)
-    end
-
-    if not rockspec then
-        rockspec, err = find_remote_rockspec(name, constraints)
-    end
-
-    return rockspec, err
-end
-
-local any_constraints = parse_constraints('>= 0')
-
 local function expand_dependencies(dep, dependencies, no_cache)
-    local rockspec = load_rockspec(dep.name, dep.constraints or any_constraints, no_cache)
+    local rockspec = rover_rocspec.find(dep.name, dep.constraints, no_cache)
 
     if not dependencies[rockspec.name] then
         dependencies[rockspec.name] = rockspec.version
@@ -163,7 +114,7 @@ function _M:resolve(no_cache)
     for name,spec in pairs(index) do
         expand_dependencies({
             name = name,
-            constraints = parse_constraints(spec.version)
+            constraints = rover_rocspec.parse_constraints(spec.version)
         }, dependencies, no_cache or {})
     end
 
@@ -187,7 +138,7 @@ local function add_to_index(index, module)
     local existing =  index[module.name]
 
     if existing and existing.version ~= module.version then
-        return nil, string.format('duplicate dependency %s (%s ~= %s)', module.name, existing.version, module.version)
+        return nil, format('duplicate dependency %s (%s ~= %s)', module.name, existing.version, module.version)
     else
         index[module.name] = module
     end
