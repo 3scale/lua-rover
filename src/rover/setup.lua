@@ -1,11 +1,12 @@
-local _M = {
-    env = require('rover.env'),
-    roverfile = require('rover.roverfile').read()
-}
+local setmetatable = setmetatable
+local ipairs = ipairs
+local pairs = pairs
+local package = package
+local require = require
 
 local mt = {}
+local _M = {}
 
-local _, loader = pcall(require, 'luarocks.loader')
 
 local function collect_modules(tree, module, cache)
     local found = tree.manifest.repository[module]
@@ -53,10 +54,19 @@ local function preload()
 end
 
 function mt.__call()
-    if _M.roverfile then
-        preload() -- preload all rover dependencies
+    local path = package.path
+    local version = _VERSION:match('%d.%d')
 
-        package.path = _M.env.path() -- remove global load paths
+    package.path = ('lua_modules/share/lua/%s/?.lua;%s'):format(version, path)
+
+    local roverfile = require('rover.roverfile')
+    local env = require('rover.env')
+
+    package.path = path
+
+    if roverfile.read() then
+        preload() -- preload all rover dependencies
+        package.path = env.path() -- remove global load paths
     end
 end
 
