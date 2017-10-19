@@ -15,6 +15,7 @@ local _M = {
 local mt = { __index = _M }
 
 local function root(path)
+    if path == 'Roverfile' then return nil end
     return path:gsub('/Roverfile', '')
 end
 

@@ -1,14 +1,15 @@
 local setmetatable = setmetatable
 
 local update = require('rover.update')
-local roverfile = require('rover.roverfile')
+local file = require('rover.roverfile')
 
 local _M = {}
 
 local mt = {}
 
 function mt:__call(options)
-    local lock = roverfile.read():lock()
+    local roverfile = assert(file.read(options.roverfile))
+    local lock = roverfile:lock()
     local all = true
     local dependencies = {}
 
@@ -28,6 +29,7 @@ function _M:new(parser)
     local cmd = parser:command('update', 'Update dependencies')
 
     cmd:argument('dependencies'):args("*")
+    cmd:option('--roverfile', 'Path to Roverfile', 'Roverfile')
 
     return setmetatable({ parser = parser, cmd = cmd }, mt)
 end
