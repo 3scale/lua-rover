@@ -32,7 +32,8 @@ build = {
       ["rover.setup"] = "src/rover/setup.lua",
       ["rover.tree"] = "src/rover/tree.lua",
       ["rover.update"] = "src/rover/update.lua",
-      ["rover.vendor"] = "src/rover/vendor.lua"
+      ["rover.vendor"] = "src/rover/vendor.lua",
+      ["luarocks.fetch.git"] = "src/luarocks/fetch/git.lua",
    },
    install = {
       bin = {
