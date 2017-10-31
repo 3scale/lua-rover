@@ -11,7 +11,7 @@ local format = string.format
 local open = io.open
 
 local deps = require('luarocks.deps')
-local rover_rocspec  = require('rover.rockspec')
+local rover_rockspec = require('rover.rockspec')
 
 local _M = {
     DEFAULT_PATH = 'Roverfile.lock'
@@ -88,7 +88,7 @@ function _M:add(dep)
 end
 
 local function expand_dependencies(dep, dependencies, no_cache)
-    local rockspec = rover_rocspec.find(dep.name, dep.constraints, no_cache)
+    local rockspec = rover_rockspec.find(dep.name, dep.constraints, no_cache)
 
     if not dependencies[rockspec.name] then
         dependencies[rockspec.name] = rockspec.version
@@ -114,7 +114,7 @@ function _M:resolve(no_cache)
     for name,spec in pairs(index) do
         expand_dependencies({
             name = name,
-            constraints = rover_rocspec.parse_constraints(spec.version)
+            constraints = rover_rockspec.parse_constraints(spec.version)
         }, dependencies, no_cache or {})
     end
 
