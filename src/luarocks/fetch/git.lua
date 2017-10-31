@@ -7,6 +7,8 @@ local unpack = unpack or table.unpack
 local fs = require("luarocks.fs")
 local dir = require("luarocks.dir")
 local util = require("luarocks.util")
+local persist = require('luarocks.persist')
+local type_check = require("luarocks.type_check")
 
 --- Git >= 1.7.10 can clone a branch **or tag**, < 1.7.10 by branch only. We
 -- need to know this in order to build the appropriate command; if we can't
@@ -22,6 +24,35 @@ local function git_can_clone_by_tag(git_cmd)
   return value
 end
 
+
+local function git_commit(git_cmd, path)
+  local command = {
+    fs.Q(git_cmd),
+    "--git-dir", fs.Q(dir.path(path, '.git')),
+    '--work-tree', fs.Q(path),
+    'rev-parse', '--verify', 'HEAD'
+  }
+
+  local fd = io.popen(table.concat(command, ' '))
+  local out = fd:read("*l")
+  local ok = fd:close()
+
+  if ok then
+    return out
+  else
+    return nil, 'could not get git commit hash'
+  end
+end
+
+local function update_rockspec(rockspec, changes)
+  local file = rockspec.local_filename
+  local cached = persist.load_into_table(file)
+
+  util.deep_merge(cached, changes)
+  util.deep_merge(rockspec, changes)
+
+  return persist.save_from_table(file, cached, type_check.rockspec_order)
+end
 --- Download sources for building a rock, using git.
 -- @param rockspec table: The rockspec table
 -- @param extract boolean: Unused in this module (required for API purposes.)
@@ -58,6 +89,9 @@ function git.get_sources(rockspec, extract, dest_dir, depth)
   local ok, err = fs.change_dir(store_dir)
   if not ok then return nil, err end
 
+  local commit = string.match(rockspec.source.hash or '', '%w+')
+  if not depth and commit then depth = '--shallow-submodules' end -- setting it to empty string fails
+
   local command = {fs.Q(git_cmd), "clone", depth or "--depth=1", rockspec.source.url, module}
   local tag_or_branch = rockspec.source.tag or rockspec.source.branch
   -- If the tag or branch is explicitly set to "master" in the rockspec, then
@@ -80,6 +114,22 @@ function git.get_sources(rockspec, extract, dest_dir, depth)
     if not fs.execute(unpack(checkout_command)) then
       return nil, 'Failed to check out the "' .. tag_or_branch ..'" tag or branch.'
     end
+  end
+
+  if commit then
+    if not fs.execute(fs.Q(git_cmd), 'reset', '--hard', commit) then
+      return nil, 'Failed to checkout revision ' .. commit
+    end
+  end
+
+  ok, err = update_rockspec(rockspec, {
+    source = {
+      hash = commit or git_commit(git_cmd, dir.path(store_dir, module))
+    }
+  })
+
+  if not ok then
+    return nil, err
   end
 
   fs.delete(dir.path(store_dir, module, ".git"))
