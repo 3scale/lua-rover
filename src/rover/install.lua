@@ -54,9 +54,9 @@ function _M:call(lock, force)
 
     local tree = require('rover.tree')
 
-    for name, version in pairs(lock.dependencies) do
-        local ret, err = install(name, version, _M.DEPS_MODE, force)
-        table.insert(status, { name = name, version = version, status = ret, error = err })
+    for name, rockspec in pairs(lock.dependencies) do
+        local ret, err = install(name, rockspec.version, _M.DEPS_MODE, force)
+        table.insert(status, { name = name, version = rockspec.version, status = ret, error = err })
     end
 
     return status

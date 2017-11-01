@@ -11,7 +11,7 @@ local format = string.format
 local open = io.open
 
 local deps = require('luarocks.deps')
-local rover_rocspec  = require('rover.rockspec')
+local rover_rockspec = require('rover.rockspec')
 
 local _M = {
     DEFAULT_PATH = 'Roverfile.lock'
@@ -24,14 +24,14 @@ local dependencies_mt = {
         local str = ""
         local dependencies = {}
 
-        for name, version in pairs(t) do
-            insert(dependencies, { name = name, version = version })
+        for name, rockspec in pairs(t) do
+            insert(dependencies, { name = name, version = rockspec.version, hash = rockspec.source.hash })
         end
 
         sort(dependencies, function(a,b) return a.name < b.name end)
 
         for i=1, #dependencies do
-            str = str .. format('%s %s\n', dependencies[i].name, dependencies[i].version)
+            str = str .. format('%s %s|%s\n', dependencies[i].name, dependencies[i].version, dependencies[i].hash or '' )
         end
 
         return str
@@ -60,7 +60,10 @@ function _M.read(lockfile)
     local lock = _M.new()
 
     for line in handle:lines() do
-        local dep, err = deps.parse_dep(line)
+        local constraint, hash  = string.match(line, "^(.-)|(%w*)$")
+        local dep, err = assert(deps.parse_dep(constraint))
+
+        dep.source = { hash = hash }
 
         if dep then
             lock:add(dep)
@@ -81,18 +84,27 @@ function _M:add(dep)
     end
 
     if version then
-        self.dependencies[dep.name] = version
+        self.dependencies[dep.name] = {
+            name = dep.name, version = version, source = dep.source
+        }
     else
         return nil, 'invalid constraints'
     end
 end
 
+local function rockspec_mismatch(cache, rockspec)
+    local other = cache[rockspec.name]
+
+    return other.version ~= rockspec.version or other.source.hash ~= rockspec.source.hash
+end
+
+
 local function expand_dependencies(dep, dependencies, no_cache)
-    local rockspec = rover_rocspec.find(dep.name, dep.constraints, no_cache)
+    local rockspec = rover_rockspec.find(dep.name, dep.constraints, no_cache)
 
     if not dependencies[rockspec.name] then
-        dependencies[rockspec.name] = rockspec.version
-    elseif dependencies[rockspec.name] ~= rockspec.version then
+        dependencies[rockspec.name] = rockspec
+    elseif rockspec_mismatch(dependencies, rockspec) then
         error('cannot have two '  .. rockspec.name)
     end
 
@@ -114,7 +126,7 @@ function _M:resolve(no_cache)
     for name,spec in pairs(index) do
         expand_dependencies({
             name = name,
-            constraints = rover_rocspec.parse_constraints(spec.version)
+            constraints = rover_rockspec.parse_constraints(spec.version)
         }, dependencies, no_cache or {})
     end
 

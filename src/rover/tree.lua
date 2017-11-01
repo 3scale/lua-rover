@@ -3,6 +3,7 @@ local tostring = tostring
 
 local path = require('luarocks.path')
 local fs = require('luarocks.fs')
+local cfg = require("luarocks.cfg")
 
 local mt = { }
 local _M = setmetatable({
@@ -29,6 +30,9 @@ function mt.__tostring(self) return self.root or _M.root end
 function mt.__call(self, root)
     self.root = fs.absolute_name(self.tree, fs.absolute_name(root))
     path.use_tree(self.root)
+
+    -- because we are storing new field in the rockspec
+    cfg.accept_unknown_fields = true
 
     return self
 end

@@ -5,6 +5,8 @@ local search = require('luarocks.search')
 local deps = require('luarocks.deps')
 local manif = require('luarocks.manif_core')
 local vers = pcall(require, 'luarocks.vers') or {}
+local path = require('luarocks.path')
+local dir = require('luarocks.dir')
 
 local tree = require('rover.tree')
 
@@ -31,17 +33,31 @@ local function find_cached_rockspec(name, constraints)
 end
 
 local function find_remote_rockspec(name, constraints)
+    local rockspec, err, rock
     local query = {
         name = name:lower(),
         constraints = constraints,
-        arch = 'rockspec',
+        arch = 'src rockspec',
     }
-    local rockspec, err = search.find_suitable_rock(query)
+    local file = search.find_suitable_rock(query)
 
-    if rockspec then
-        rockspec, err = fetch.load_rockspec(rockspec)
+    if not file then
+        return nil, "could not find module " .. deps.show_dep(query)
+    end
+
+    if file:match("%.src%.rock$") then
+        rock, err = fetch.fetch_and_unpack_rock(file)
+        file = dir.path(rock, path.rockspec_name_from_rock(file))
+    end
+
+    if file:match("%.rockspec$") then
+        rockspec, err = fetch.load_rockspec(file)
+
+        if rockspec and not rock then
+            fetch.fetch_sources(rockspec, false)
+        end
     else
-        err = "could not find module " .. deps.show_dep(query)
+        error("can't handle " .. file)
     end
 
     return rockspec, err
