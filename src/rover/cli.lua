@@ -7,6 +7,10 @@ local parser = require('rover.vendor').require('argparse')() {
 local command_target = '_cmd'
 parser:command_target(command_target)
 
+parser:flag("-v --version", "Show version info and exit.")
+    :action(function() print("Rover from git") os.exit(0) end)
+
+
 local _M = { }
 
 local mt = {}
