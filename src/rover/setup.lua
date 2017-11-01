@@ -29,6 +29,10 @@ local function collect_modules(loader, tree, module, cache)
     return modules
 end
 
+local blacklist = {
+    ['luarocks.fs.win32'] = true,
+}
+
 local function preload(loader)
     local context
     local rocks_trees = loader and loader.rocks_trees
@@ -46,8 +50,7 @@ local function preload(loader)
     if not modules then return end
 
     for module, _ in pairs(modules) do
-        -- preload everything except luarocks
-        if not module:match('^luarocks%.') then
+        if not blacklist[module] then
             require(module)
         end
     end
