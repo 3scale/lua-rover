@@ -60,7 +60,7 @@ function _M.read(lockfile)
     local lock = _M.new()
 
     for line in handle:lines() do
-        local constraint, hash  = string.match(line, "^(.-)|(%w*)$")
+        local constraint, hash  = string.match(line, "^([^|]+)|?(%g*)$")
         local dep, err = assert(deps.parse_dep(constraint))
 
         dep.source = { hash = hash }
