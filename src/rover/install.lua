@@ -4,6 +4,7 @@ local fs = require('luarocks.fs')
 local build = require("luarocks.build")
 local repos = require("luarocks.repos")
 local search = require('luarocks.search')
+local parallel = require('rover.parallel')
 
 local _M = {
     DEPS_MODE = 'none'
@@ -53,10 +54,20 @@ function _M:call(lock, force)
     local status = {}
 
     local tree = require('rover.tree')
+    local futures = { }
 
     for name, rockspec in pairs(lock.dependencies) do
-        local ret, err = install(name, rockspec.version, _M.DEPS_MODE, force)
-        table.insert(status, { name = name, version = rockspec.version, status = ret, error = err })
+        local future = assert(parallel(install, name, rockspec.version, _M.DEPS_MODE, force))
+        table.insert(status, { name = name, version = rockspec.version, future = future })
+    end
+
+    for i=1, #status do
+        local future = status[i].future
+
+        local res, err = future:value()
+
+        status[i].status = res
+        status[i].error = err
     end
 
     return status
