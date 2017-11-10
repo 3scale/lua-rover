@@ -175,8 +175,8 @@ end
 local function index_from_dependencies(dependencies)
     local index = {}
 
-    for name, version in pairs(dependencies) do
-        local module, err = add_to_index(index, { name = name, version = version })
+    for _, module in pairs(dependencies) do
+        local module, err = add_to_index(index, module)
         if not module and err then return nil, err end
     end
 
