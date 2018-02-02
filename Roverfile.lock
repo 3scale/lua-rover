@@ -1,8 +1,8 @@
 argparse 0.5.0-1||production
 busted 2.0.rc12-1||testing
 dkjson 2.5-2||testing
-inspect 3.1.0-1||development
-lua-resty-repl 0.0.6-0||development
+inspect 3.1.1-0||development
+lua-resty-repl 0.0.6-0|3878f41b7e8f97b1c96919db19dbee9496569dda|development
 lua-term 0.7-1||testing
 lua_cliargs 3.0-1||testing
 luafilesystem 1.7.0-2||testing

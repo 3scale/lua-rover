@@ -31,6 +31,8 @@ function mt.__call(self, root)
     self.root = fs.absolute_name(self.tree, fs.absolute_name(root))
     path.use_tree(self.root)
 
+    cfg.rocks_trees = { self }
+
     -- because we are storing new field in the rockspec
     cfg.accept_unknown_fields = true
 

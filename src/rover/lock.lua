@@ -9,6 +9,8 @@ local insert = table.insert
 local sort = table.sort
 local format = string.format
 local open = io.open
+local concat = table.concat
+local unpack = unpack
 
 local deps = require('luarocks.deps')
 local rover_rockspec = require('rover.rockspec')
@@ -21,7 +23,6 @@ local mt = { __index = _M }
 
 local dependencies_mt = {
     __tostring = function(t)
-        local str = ""
         local dependencies = {}
 
         for name, rockspec in pairs(t) do
@@ -56,6 +57,28 @@ function _M.new(roverfile)
     }, mt)
 end
 
+local function split(str, sep)
+    local sep, fields = sep or ":", {}
+    local len = string.len(sep)
+    local init = 0
+    local match
+    local begin
+    if not str then return fields end
+
+    while init do
+        begin = init
+        match, init = string.find(str, sep, init + 1, true)
+
+        if match then
+            insert(fields, string.sub(str, begin, match - begin - len))
+        else
+            insert(fields, string.sub(str, begin + len))
+        end
+    end
+
+    return fields
+end
+
 function _M.read(lockfile)
     local file = lockfile or _M.DEFAULT_PATH
     local handle, err
@@ -71,18 +94,28 @@ function _M.read(lockfile)
     local lock = _M.new()
 
     for line in handle:lines() do
-        local constraint, hash  = string.match(line, "^([^|]+)|?(%g*)$")
-        local dep, err = assert(deps.parse_dep(constraint))
-
-        dep.source = { hash = hash }
+        local dep, err = _M.parse_line(line)
 
         if dep then
             lock:add(dep)
-        else return false, err
+        else
+            return false, err
         end
     end
 
     return lock
+end
+
+function _M.parse_line(line)
+    local constraint, hash, groups = unpack(split(line, '|'))
+    local dep, err = assert(deps.parse_dep(constraint))
+
+    if not dep then return nil, err end
+
+    dep.source = { hash = hash }
+    dep.groups = split(groups, ',')
+
+    return dep
 end
 
 function _M:add(dep)
@@ -142,7 +175,7 @@ function _M:resolve(no_cache)
     for name,spec in pairs(index) do
         expand_dependencies({
             name = name,
-            groups = { spec.group },
+            groups = type(spec.group) == 'table' and spec.group or { spec.group },
             constraints = rover_rockspec.parse_constraints(spec.version)
         }, dependencies, no_cache or {})
     end
