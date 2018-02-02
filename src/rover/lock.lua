@@ -9,6 +9,8 @@ local insert = table.insert
 local sort = table.sort
 local format = string.format
 local open = io.open
+local concat = table.concat
+local unpack = unpack
 
 local deps = require('luarocks.deps')
 local rover_rockspec = require('rover.rockspec')
@@ -21,20 +23,30 @@ local mt = { __index = _M }
 
 local dependencies_mt = {
     __tostring = function(t)
-        local str = ""
         local dependencies = {}
 
         for name, rockspec in pairs(t) do
-            insert(dependencies, { name = name, version = rockspec.version, hash = rockspec.source.hash })
+            insert(dependencies, {
+                name = name, version = rockspec.version,
+                hash = rockspec.source.hash,
+                groups = rockspec.groups or {}
+            })
         end
 
         sort(dependencies, function(a,b) return a.name < b.name end)
 
         for i=1, #dependencies do
-            str = str .. format('%s %s|%s\n', dependencies[i].name, dependencies[i].version, dependencies[i].hash or '' )
+            local str = format('%s %s|%s|%s',
+                dependencies[i].name,
+                dependencies[i].version,
+                dependencies[i].hash or '',
+                concat(dependencies[i].groups, ',')
+            )
+
+            dependencies[i] = str
         end
 
-        return str
+        return concat(dependencies, "\n")
     end
 }
 
@@ -43,6 +55,28 @@ function _M.new(roverfile)
         roverfile = roverfile,
         dependencies = setmetatable({}, dependencies_mt)
     }, mt)
+end
+
+local function split(str, sep)
+    local sep, fields = sep or ":", {}
+    local len = string.len(sep)
+    local init = 0
+    local match
+    local begin
+    if not str then return fields end
+
+    while init do
+        begin = init
+        match, init = string.find(str, sep, init + 1, true)
+
+        if match then
+            insert(fields, string.sub(str, begin, match - begin - len))
+        else
+            insert(fields, string.sub(str, begin + len))
+        end
+    end
+
+    return fields
 end
 
 function _M.read(lockfile)
@@ -60,18 +94,28 @@ function _M.read(lockfile)
     local lock = _M.new()
 
     for line in handle:lines() do
-        local constraint, hash  = string.match(line, "^([^|]+)|?(%g*)$")
-        local dep, err = assert(deps.parse_dep(constraint))
-
-        dep.source = { hash = hash }
+        local dep, err = _M.parse_line(line)
 
         if dep then
             lock:add(dep)
-        else return false, err
+        else
+            return false, err
         end
     end
 
     return lock
+end
+
+function _M.parse_line(line)
+    local constraint, hash, groups = unpack(split(line, '|'))
+    local dep, err = assert(deps.parse_dep(constraint))
+
+    if not dep then return nil, err end
+
+    dep.source = { hash = hash }
+    dep.groups = split(groups, ',')
+
+    return dep
 end
 
 function _M:add(dep)
@@ -85,7 +129,7 @@ function _M:add(dep)
 
     if version then
         self.dependencies[dep.name] = {
-            name = dep.name, version = version, source = dep.source
+            name = dep.name, version = version, source = dep.source, groups = dep.groups
         }
     else
         return nil, 'invalid constraints'
@@ -101,9 +145,12 @@ end
 
 local function expand_dependencies(dep, dependencies, no_cache)
     local rockspec = rover_rockspec.find(dep.name, dep.constraints, no_cache)
+    local groups = dep.groups
 
     if not dependencies[rockspec.name] then
+        -- TODO: would be better to introduce "dependency" class/object
         dependencies[rockspec.name] = rockspec
+        rockspec.groups = groups
     elseif rockspec_mismatch(dependencies, rockspec) then
         error('cannot have two '  .. rockspec.name)
     end
@@ -111,10 +158,12 @@ local function expand_dependencies(dep, dependencies, no_cache)
     local matched, missing, _ = deps.match_deps(rockspec, nil, 'one')
 
     for _, dep in pairs(matched) do
+        dep.groups = groups
         expand_dependencies(dep, dependencies, no_cache)
     end
 
     for _, dep in pairs(missing) do
+        dep.groups = groups
         expand_dependencies(dep, dependencies, no_cache)
     end
 end
@@ -126,6 +175,7 @@ function _M:resolve(no_cache)
     for name,spec in pairs(index) do
         expand_dependencies({
             name = name,
+            groups = type(spec.group) == 'table' and spec.group or { spec.group },
             constraints = rover_rockspec.parse_constraints(spec.version)
         }, dependencies, no_cache or {})
     end

@@ -1,4 +1,5 @@
 local pairs = pairs
+local ipairs = ipairs
 
 local fs = require('luarocks.fs')
 local build = require("luarocks.build")
@@ -49,13 +50,29 @@ local function install(name, version, deps_mode, force)
     return 'exists'
 end
 
-function _M:call(lock, force)
+local function should_install(dep, groups)
+    for _,group in ipairs(dep.groups or {}) do
+        if groups[group] then return true end
+    end
+end
+
+
+function _M:call(lock, force, groups)
     local status = {}
 
     local tree = require('rover.tree')
 
     for name, rockspec in pairs(lock.dependencies) do
-        local ret, err = install(name, rockspec.version, _M.DEPS_MODE, force)
+
+        local ret, err
+
+        if should_install(rockspec, groups) then
+            ret, err = install(name, rockspec.version, _M.DEPS_MODE, force)
+        else
+            ret = 'skipped'
+            err = 'group not allowed'
+        end
+
         table.insert(status, { name = name, version = rockspec.version, status = ret, error = err })
     end
 
