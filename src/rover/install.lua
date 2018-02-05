@@ -1,5 +1,6 @@
 local pairs = pairs
 local ipairs = ipairs
+local next = next
 
 local fs = require('luarocks.fs')
 local build = require("luarocks.build")
@@ -53,7 +54,7 @@ end
 local function should_install(dep, desired_groups)
     local groups = dep.groups or {}
 
-    if #desired_groups == 0 then return true end
+    if not next(desired_groups) then return true end
 
     for _,group in ipairs(groups) do
         if desired_groups[group] then return true end
