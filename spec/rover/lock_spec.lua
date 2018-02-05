@@ -22,5 +22,12 @@ describe('lock', function()
 
       assert.same({'production'}, dep.groups)
     end)
+
+    it('dependency, hash and multipe groups', function()
+      local dep = _M.parse_line('apicast scm-1|91a28825d759f580cae17c2344|foobar,production')
+      assert.same({ hash = '91a28825d759f580cae17c2344' }, dep.source)
+      assert.same({ 'foobar', 'production' }, dep.groups)
+    end)
+
   end)
 end)

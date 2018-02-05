@@ -66,13 +66,13 @@ local function split(str, sep)
     if not str then return fields end
 
     while init do
-        begin = init
-        match, init = string.find(str, sep, init + 1, true)
+        begin = init + 1
+        match, init = string.find(str, sep, begin, true)
 
         if match then
-            insert(fields, string.sub(str, begin, match - begin - len))
+            insert(fields, string.sub(str, begin, match - len))
         else
-            insert(fields, string.sub(str, begin + len))
+            insert(fields, string.sub(str, begin))
         end
     end
 
