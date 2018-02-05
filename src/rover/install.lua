@@ -50,14 +50,16 @@ local function install(name, version, deps_mode, force)
     return 'exists'
 end
 
-local function should_install(dep, groups)
+local function should_install(dep, desired_groups)
     local groups = dep.groups or {}
 
-    if #groups == 0 then return true end
+    if #desired_groups == 0 then return true end
 
     for _,group in ipairs(groups) do
-        if groups[group] then return true end
+        if desired_groups[group] then return true end
     end
+
+    return false
 end
 
 
