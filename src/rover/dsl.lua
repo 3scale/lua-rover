@@ -46,7 +46,7 @@ local module_mt = {
 local function module(name, version)
     return setmetatable({
         name = name, version = version or '>= 0',
-        group = 'production',
+        groups = { 'production' },
         manifest = manifest('root')
     }, module_mt)
 end
@@ -117,7 +117,7 @@ function _M:group(name)
 
     return function(modules)
         for i=1, #modules do
-            modules[i].group = name
+            modules[i].groups = { name }
         end
 
         return { 'group', name, modules }

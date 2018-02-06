@@ -142,17 +142,40 @@ local function rockspec_mismatch(cache, rockspec)
     return other.version ~= rockspec.version or other.source.hash ~= rockspec.source.hash
 end
 
+local function merge_groups(groups1, groups2)
+    local unique = {}
+
+    for _,group in ipairs(groups1) do
+        unique[group] = true
+    end
+
+    for _,group in ipairs(groups2) do
+        unique[group] = true
+    end
+
+    local groups = {}
+
+    for group,_ in pairs(unique) do
+        insert(groups, group)
+    end
+
+    return groups
+end
+
 
 local function expand_dependencies(dep, dependencies, no_cache)
     local rockspec = rover_rockspec.find(dep.name, dep.constraints, no_cache)
     local groups = dep.groups
+    local existing = dependencies[rockspec.name]
 
-    if not dependencies[rockspec.name] then
+    if not existing then
         -- TODO: would be better to introduce "dependency" class/object
         dependencies[rockspec.name] = rockspec
         rockspec.groups = groups
     elseif rockspec_mismatch(dependencies, rockspec) then
         error('cannot have two '  .. rockspec.name)
+    else
+        existing.groups = merge_groups(existing.groups, groups)
     end
 
     local matched, missing, _ = deps.match_deps(rockspec, nil, 'one')
@@ -175,7 +198,7 @@ function _M:resolve(no_cache)
     for name,spec in pairs(index) do
         expand_dependencies({
             name = name,
-            groups = type(spec.group) == 'table' and spec.group or { spec.group },
+            groups = spec.groups,
             constraints = rover_rockspec.parse_constraints(spec.version)
         }, dependencies, no_cache or {})
     end
