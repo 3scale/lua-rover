@@ -26,6 +26,22 @@ getmetatable(io.output()).lines = function(self, ...)
     end
 end
 
+-- get_dep_spec function ensures that a valid spec config is retrieved from
+-- luarocks, only two archirtectures work on luarocks 2.4, `rock` and
+-- `rockspec`, `all` arch is not enabled, so that arch need to be skipped at
+-- search.
+local function get_dep_spec(name, version)
+    local query = search.make_query(name:lower(), version)
+    query["arch"] = "rockspec"
+    local spec = search.find_suitable_rock(query)
+    if spec then
+      return spec
+    end
+
+    query["arch"] = "rock"
+    return search.find_suitable_rock(query)
+end
+
 local function install(name, version, deps_mode, force)
 
     assert(fs.check_command_permissions({}))
@@ -35,7 +51,8 @@ local function install(name, version, deps_mode, force)
     end
 
     if not repos.is_installed(name, version) then
-        local spec = assert(search.find_suitable_rock(search.make_query(name:lower(), version)))
+
+        local spec = assert(get_dep_spec(name:lower(), version))
 
         if spec:match("%.rockspec$") then
             assert(build.build_rockspec(spec, true, false, deps_mode))
@@ -44,7 +61,7 @@ local function install(name, version, deps_mode, force)
             assert(build.build_rock(spec, false, deps_mode))
             return 'installed'
         else
-            error("can't install " .. spec)
+            error("can't install " .. spec, ", due to invalid spec format")
         end
     end
 
