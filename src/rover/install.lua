@@ -32,13 +32,13 @@ end
 -- search.
 local function get_dep_spec(name, version)
     local query = search.make_query(name:lower(), version)
-    query["arch"] = "rockspec"
+    query["arch"] = "rock"
     local spec = search.find_suitable_rock(query)
     if spec then
       return spec
     end
 
-    query["arch"] = "rock"
+    query["arch"] = "rockspec"
     return search.find_suitable_rock(query)
 end
 
