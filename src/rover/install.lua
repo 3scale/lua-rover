@@ -4,6 +4,7 @@ local next = next
 
 local fs = require('luarocks.fs')
 local build = require("luarocks.build")
+local cfg = require("luarocks.cfg")
 local repos = require("luarocks.repos")
 local search = require('luarocks.search')
 
@@ -80,6 +81,13 @@ local function should_install(dep, desired_groups)
     return false
 end
 
+function _M.set_extra_cflags(flag)
+  if not flag then
+    return
+  end
+
+  cfg.variables.CFLAGS =  cfg.variables.CFLAGS .. " " .. flag
+end
 
 function _M:call(lock, force, groups)
     local status = {}

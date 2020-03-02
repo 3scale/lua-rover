@@ -17,6 +17,7 @@ local function format_status(status)
 end
 
 function mt:__call(options)
+    install.set_extra_cflags(os.getenv("EXTRA_CFLAGS"))
     local lock = options.roverfile .. '.lock'
     local lockfile = assert(rover_lock.read(lock))
 
