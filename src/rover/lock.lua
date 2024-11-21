@@ -14,6 +14,7 @@ local unpack = unpack
 
 local deps = require('luarocks.deps')
 local rover_rockspec = require('rover.rockspec')
+local queries = require("luarocks.queries")
 
 local _M = {
     DEFAULT_PATH = 'Roverfile.lock'
@@ -108,7 +109,7 @@ end
 
 function _M.parse_line(line)
     local constraint, hash, groups = unpack(split(line, '|'))
-    local dep, err = assert(deps.parse_dep(constraint))
+    local dep, err = assert(queries.from_dep_string(constraint))
 
     if not dep then return nil, err end
 
@@ -118,12 +119,21 @@ function _M.parse_line(line)
     return dep
 end
 
+local function show_version(v, internal)
+   assert(type(v) == "table")
+   assert(type(internal) == "boolean" or not internal)
+
+   return (internal
+           and table.concat(v, ":")..(v.revision and tostring(v.revision) or "")
+           or v.string)
+end
+
 function _M:add(dep)
     local version
 
     for _, constraint in ipairs(dep.constraints) do
         if constraint.op == '==' then
-            version = deps.show_version(constraint.version, false)
+            version = show_version(constraint.version, false)
         end
     end
 
@@ -164,7 +174,7 @@ end
 
 
 local function expand_dependencies(dep, dependencies, no_cache)
-    local rockspec = rover_rockspec.find(dep.name, dep.constraints, no_cache)
+    local rockspec = rover_rockspec.find(dep, no_cache)
     local groups = dep.groups
     local existing = dependencies[rockspec.name]
 
@@ -178,15 +188,17 @@ local function expand_dependencies(dep, dependencies, no_cache)
         existing.groups = merge_groups(existing.groups, groups)
     end
 
-    local matched, missing, _ = deps.match_deps(rockspec, nil, 'one')
+    local matched, missing, _ = deps.match_deps(rockspec.dependencies, rockspec.rocks_provided, nil, 'one')
 
     for _, dep in pairs(matched) do
-        dep.groups = groups
-        expand_dependencies(dep, dependencies, no_cache)
+        local query = queries.new(dep.name, nil, dep.version, false, "src|rockspec")
+        query.groups = groups
+        expand_dependencies(query, dependencies, no_cache)
     end
 
     for _, dep in pairs(missing) do
-        dep.groups = groups
+        local query = queries.new(dep.name, nil, dep.version, false, "src|rockspec")
+        query.groups = groups
         expand_dependencies(dep, dependencies, no_cache)
     end
 end
@@ -196,11 +208,9 @@ function _M:resolve(no_cache)
     local dependencies = setmetatable({}, dependencies_mt)
 
     for name,spec in pairs(index) do
-        expand_dependencies({
-            name = name,
-            groups = spec.groups,
-            constraints = rover_rockspec.parse_constraints(spec.version)
-        }, dependencies, no_cache or {})
+        local query = queries.from_dep_string(name .. spec.version)
+        query.groups = spec.groups
+        expand_dependencies(query, dependencies, no_cache or {})
     end
 
     self.resolved = dependencies

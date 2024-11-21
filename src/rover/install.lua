@@ -4,9 +4,11 @@ local next = next
 
 local fs = require('luarocks.fs')
 local build = require("luarocks.build")
-local cfg = require("luarocks.cfg")
+local cfg = require("luarocks.core.cfg")
 local repos = require("luarocks.repos")
 local search = require('luarocks.search')
+local fetch = require('luarocks.fetch')
+local path = require('luarocks.path')
 
 local _M = {
     DEPS_MODE = 'none'
@@ -27,20 +29,29 @@ getmetatable(io.output()).lines = function(self, ...)
     end
 end
 
--- get_dep_spec function ensures that a valid spec config is retrieved from
--- luarocks, only two archirtectures work on luarocks 2.4, `rock` and
--- `rockspec`, `all` arch is not enabled, so that arch need to be skipped at
--- search.
-local function get_dep_spec(name, version)
-    local query = search.make_query(name:lower(), version)
-    query["arch"] = "rock"
-    local spec = search.find_suitable_rock(query)
-    if spec then
-      return spec
-    end
+local function build_rock(rock_file, opts)
+   local ok, err, errcode
 
-    query["arch"] = "rockspec"
-    return search.find_suitable_rock(query)
+   local unpack_dir
+   unpack_dir, err, errcode = fetch.fetch_and_unpack_rock(rock_file)
+   if not unpack_dir then
+      return nil, err, errcode
+   end
+   local rockspec_file = path.rockspec_name_from_rock(rock_file)
+
+   ok, err = fs.change_dir(unpack_dir)
+   if not ok then return nil, err end
+
+   local rockspec
+   rockspec, err, errcode = fetch.load_rockspec(rockspec_file)
+   if not rockspec then
+      return nil, err, errcode
+   end
+
+   ok, err, errcode = build.build_rockspec(rockspec, opts)
+
+   fs.pop_dir()
+   return ok, err, errcode
 end
 
 local function install(name, version, deps_mode, force)
@@ -51,15 +62,36 @@ local function install(name, version, deps_mode, force)
         repos.delete_version(name, version, deps_mode)
     end
 
-    if not repos.is_installed(name, version) then
+    local opts = build.opts({
+      need_to_fetch = true,
+      minimal_mode = false,
+      deps_mode = deps_mode,
+      build_only_deps = false,
+      namespace = "",
+      branch = "",
+      verify = false,
+      check_lua_versions = false,
+      pin = false,
+      rebuild = force,
+      no_install = false,
+    })
 
-        local spec = assert(get_dep_spec(name:lower(), version))
+    if not repos.is_installed(name, version) then
+        local spec, err = assert(search.find_src_or_rockspec(name))
+        if not spec then
+           return nil, err
+        end
 
         if spec:match("%.rockspec$") then
-            assert(build.build_rockspec(spec, true, false, deps_mode))
+            local rockspec, err = fetch.load_rockspec(spec, nil, opts.verify)
+            if not rockspec then
+               return nil, err
+            end
+            assert(build.build_rockspec(rockspec, opts))
             return 'installed'
         elseif spec:match("%.src%.rock$") then
-            assert(build.build_rock(spec, false, deps_mode))
+            opts.need_to_fetch = false
+            assert(build_rock(spec, opts))
             return 'installed'
         else
             error("can't install " .. spec, ", due to invalid spec format")
