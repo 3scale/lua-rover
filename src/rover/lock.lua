@@ -199,7 +199,7 @@ local function expand_dependencies(dep, dependencies, no_cache)
     for _, dep in pairs(missing) do
         local query = queries.new(dep.name, nil, dep.version, false, "src|rockspec")
         query.groups = groups
-        expand_dependencies(dep, dependencies, no_cache)
+        expand_dependencies(query, dependencies, no_cache)
     end
 end
 
