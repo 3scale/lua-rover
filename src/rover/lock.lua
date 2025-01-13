@@ -199,7 +199,7 @@ local function expand_dependencies(dep, dependencies, no_cache)
     for _, dep in pairs(missing) do
         local query = queries.new(dep.name, nil, dep.version, false, "src|rockspec")
         query.groups = groups
-        expand_dependencies(dep, dependencies, no_cache)
+        expand_dependencies(query, dependencies, no_cache)
     end
 end
 
@@ -208,8 +208,9 @@ function _M:resolve(no_cache)
     local dependencies = setmetatable({}, dependencies_mt)
 
     for name,spec in pairs(index) do
-        local query = queries.from_dep_string(name .. spec.version)
+        local query = queries.from_dep_string(name .. " " .. spec.version)
         query.groups = spec.groups
+        query.arch.all = false
         expand_dependencies(query, dependencies, no_cache or {})
     end
 
