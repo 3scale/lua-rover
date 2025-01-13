@@ -208,7 +208,7 @@ function _M:resolve(no_cache)
     local dependencies = setmetatable({}, dependencies_mt)
 
     for name,spec in pairs(index) do
-        local query = queries.from_dep_string(name .. spec.version)
+        local query = queries.from_dep_string(name .. " " .. spec.version)
         query.groups = spec.groups
         expand_dependencies(query, dependencies, no_cache or {})
     end
