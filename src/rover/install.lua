@@ -77,7 +77,7 @@ local function install(name, version, deps_mode, force)
     })
 
     if not repos.is_installed(name, version) then
-        local spec, err = assert(search.find_src_or_rockspec(name))
+        local spec, err = assert(search.find_src_or_rockspec(name, nil, version))
         if not spec then
            return nil, err
         end
