@@ -188,7 +188,7 @@ local function expand_dependencies(dep, dependencies, no_cache)
         existing.groups = merge_groups(existing.groups, groups)
     end
 
-    local matched, missing, _ = deps.match_deps(rockspec.dependencies, rockspec.rocks_provided, nil, 'one')
+    local matched, missing, _ = deps.match_deps(rockspec.dependencies.queries, rockspec.rocks_provided, nil, 'one')
 
     for _, dep in pairs(matched) do
         local query = queries.new(dep.name, nil, dep.version, false, "src|rockspec")

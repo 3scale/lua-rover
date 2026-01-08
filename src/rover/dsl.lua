@@ -73,9 +73,10 @@ local function rockspec(name)
         spec = rockspec,
         modules = modules }, rockspec_mt)
 
+    local dependencies = rockspec.dependencies.queries
 
-    for i=1, #(rockspec.dependencies) do
-        local dep = rockspec.dependencies[i]
+    for i=1, #(dependencies) do
+        local dep = dependencies[i]
         local version = {}
 
         for c=1, #(dep.constraints) do
