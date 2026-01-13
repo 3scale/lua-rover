@@ -1,0 +1,43 @@
+package = "lua-rover"
+version = "0.2.3-0"
+source = {
+   url = "git+https://github.com/3scale/lua-rover.git",
+   tag = "v0.2.3"
+}
+description = {
+   homepage = "https://github.com/3scale/lua-rover",
+   license = "Apache-2.0"
+}
+dependencies = {
+   "argparse ~> 0.5.0",
+   "luarocks ~> 3.12.0"
+}
+build = {
+   type = "builtin",
+   modules = {
+      ["rover.cli"] = "src/rover/cli.lua",
+      ["rover.cli.exec"] = "src/rover/cli/exec.lua",
+      ["rover.cli.inspect"] = "src/rover/cli/inspect.lua",
+      ["rover.cli.install"] = "src/rover/cli/install.lua",
+      ["rover.cli.lock"] = "src/rover/cli/lock.lua",
+      ["rover.cli.update"] = "src/rover/cli/update.lua",
+      ["rover.dsl"] = "src/rover/dsl.lua",
+      ["rover.env"] = "src/rover/env.lua",
+      ["rover.exec"] = "src/rover/exec.lua",
+      ["rover.inspect"] = "src/rover/inspect.lua",
+      ["rover.install"] = "src/rover/install.lua",
+      ["rover.lock"] = "src/rover/lock.lua",
+      ["rover.rockspec"] = "src/rover/rockspec.lua",
+      ["rover.roverfile"] = "src/rover/roverfile.lua",
+      ["rover.setup"] = "src/rover/setup.lua",
+      ["rover.tree"] = "src/rover/tree.lua",
+      ["rover.update"] = "src/rover/update.lua",
+      ["rover.vendor"] = "src/rover/vendor.lua",
+      ["luarocks.fetch.git"] = "src/luarocks/fetch/git.lua",
+   },
+   install = {
+      bin = {
+         rover = "bin/rover"
+      }
+   }
+}
